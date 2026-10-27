@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-HK" class="h-full bg-slate-100 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定積分與面積之關係 | Definite Integrals & Area</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- MathJax 3 Engine for Fail-Proof SVG Math Rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans TC', sans-serif; }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-slate-50 text-slate-800 antialiased">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 py-3 px-4 shadow-sm">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-indigo-600 rounded-lg text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-chart-area text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900">定積分與面積之關係 (Definite Integral & Area)</h1>
+                    <p class="text-xs text-slate-500">直觀探索：極限切片與微積分基本定理 $F(b) - F(a)$</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
+
+        <!-- Controls Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+            
+            <div class="sm:col-span-5">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">選擇函數 $f(x)$</label>
+                <select id="func-select" onchange="handleFuncSelectChange()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                    <option value="f1">f(x) = ¼ x² + 1 (二次抛物線)</option>
+                    <option value="f2">f(x) = -½ x² + 4 (開口向下抛物線)</option>
+                    <option value="f3">f(x) = sin(x) + 2 (正弦波)</option>
+                    <option value="f4">f(x) = 1.2x + 0.8 (直線)</option>
+                    <option value="custom">✍️ 自訂函數 Custom f(x)...</option>
+                </select>
+
+                <!-- Custom function text input (hidden by default) -->
+                <div id="custom-func-container" class="mt-2 hidden">
+                    <div class="flex gap-2 items-center">
+                        <span class="text-xs font-mono font-bold text-slate-600">f(x) =</span>
+                        <input type="text" id="custom-func-input" value="0.2*x^3 - x + 2" placeholder="例: x^2 - 2*x + 3, sin(x)+2" onchange="updateApp()" onkeyup="if(event.key==='Enter') updateApp()" class="w-full bg-slate-50 border border-indigo-300 rounded-lg p-1.5 text-xs text-indigo-700 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">支援 + - * / ^ Math.sin Math.cos Math.exp 等語法</p>
+                </div>
+            </div>
+
+            <div class="sm:col-span-4 flex items-center gap-2">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">起點 $a$</label>
+                    <input type="number" id="input-a" value="0" step="0.5" min="-2" max="3" onchange="updateApp()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm text-center text-indigo-600 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">終點 $b$</label>
+                    <input type="number" id="input-b" value="4" step="0.5" min="1" max="6" onchange="updateApp()" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm text-center text-indigo-600 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="sm:col-span-3">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="text-xs font-semibold text-slate-600">切片數 $n$</label>
+                    <span id="n-val-display" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">n = 12</span>
+                </div>
+                <input type="range" id="n-slider" min="1" max="500" value="12" step="1" oninput="updateApp()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+            </div>
+
+        </div>
+
+        <!-- Single Graph Area -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">幾何視覺圖解</span>
+                    曲線 $y = f(x)$ 下方的累積面積與微小切片
+                </h2>
+                
+                <div class="flex items-center gap-3">
+                    <!-- Zoom & Pan Controls -->
+                    <div class="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 shadow-inner">
+                        <button onclick="zoomCanvas(1.2)" class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded transition text-xs font-bold" title="放大 Zoom In">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </button>
+                        <button onclick="zoomCanvas(1/1.2)" class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded transition text-xs font-bold" title="縮小 Zoom Out">
+                            <i class="fa-solid fa-magnifying-glass-minus"></i>
+                        </button>
+                        <button onclick="resetZoomPan()" class="px-2 py-1 text-slate-600 hover:text-indigo-600 hover:bg-white rounded transition text-xs font-bold" title="重置視角 Reset">
+                            <i class="fa-solid fa-rotate-left"></i> 重置
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                        <input type="checkbox" id="show-dx-check" checked onchange="updateApp()" class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
+                        <label for="show-dx-check" class="text-slate-700 font-semibold cursor-pointer select-none">顯示末端微細切片 $\Delta A \approx f(x)\Delta x$</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Single Canvas Element with Drag & Zoom hints -->
+            <div class="relative w-full aspect-[16/7] bg-slate-50 rounded-xl overflow-hidden border border-slate-200 cursor-grab active:cursor-grabbing group">
+                <canvas id="main-canvas" class="w-full h-full block"></canvas>
+                <div class="absolute bottom-2 right-2 bg-slate-900/60 text-white text-[10px] px-2 py-1 rounded-md opacity-70 group-hover:opacity-100 transition pointer-events-none">
+                    💡 可滾輪縮小放大，拖拉平移視圖
+                </div>
+            </div>
+
+            <!-- Real-time Metrics (Calculation at Bottom) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center pt-1">
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium">切片闊度 $\Delta x$</p>
+                    <p id="calc-dx" class="text-sm sm:text-base font-mono font-bold text-amber-600 mt-0.5">0.3333</p>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium">黎曼和 $\sum f(x_i)\Delta x$</p>
+                    <p id="calc-sum" class="text-sm sm:text-base font-mono font-bold text-indigo-600 mt-0.5">8.7500</p>
+                </div>
+                <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-medium">精確定積分 $\int_a^b f(x)dx$</p>
+                    <p id="calc-exact" class="text-sm sm:text-base font-mono font-bold text-emerald-600 mt-0.5">9.3333</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Explanatory Core Equations -->
+        <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-3 sm:p-4 text-center shadow-sm flex flex-col items-center justify-center">
+            <h3 class="text-[11px] sm:text-xs font-bold text-indigo-900 uppercase tracking-wide mb-1">微積分核心定義公式</h3>
+            <div class="text-sm sm:text-base md:text-lg text-indigo-950 font-bold overflow-x-auto py-1">
+                $$\text{面積} = \lim_{\Delta x \to 0} \sum_{i=1}^{n} f(x_i)\Delta x = \int_{a}^{b} f(x) \, dx = F(b) - F(a)$$
+            </div>
+        </div>
+
+        <!-- Detailed Step-by-Step Explanation Card: FTC Logic -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div class="flex items-center gap-2">
+                    <div class="p-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs">
+                        <i class="fa-solid fa-square-root-variable"></i>
+                    </div>
+                    <h2 class="text-xs sm:text-sm font-bold text-slate-800">微積分基本定理推導邏輯</h2>
+                </div>
+            </div>
+
+            <!-- Two-line Definition Header as shown in screenshot -->
+            <div class="flex flex-col gap-1">
+                <p class="text-xs sm:text-sm font-bold text-slate-800">定義</p>
+                <p class="text-xs sm:text-sm font-bold text-slate-800">A(x): 由起點 a 累積至變數 x 之「累積面積函數」</p>
+            </div>
+
+            <!-- Blue Block: Equation Formula -->
+            <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-3 text-left overflow-x-auto whitespace-nowrap">
+                <div class="text-xs sm:text-sm text-indigo-900 font-bold font-mono">
+                    $A(x) = \int_a^x f(t) \, dt$
+                </div>
+            </div>
+
+            <!-- Compact 3-Column Grid for Math Steps -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                <!-- Step 1 -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <span class="px-1.5 py-0.5 bg-emerald-600 text-white font-bold rounded text-[10px]">Step 1</span>
+                        <p class="text-xs font-bold text-slate-800">面積變率與高度</p>
+                    </div>
+                    <div class="text-xs text-slate-700 space-y-1 font-mono leading-relaxed">
+                        <p>$\Delta A \approx f(x) \cdot \Delta x$</p>
+                        <p>$\implies \frac{\Delta A}{\Delta x} \approx f(x)$</p>
+                        <p class="font-bold text-emerald-700 mt-1">$\therefore A'(x) = f(x)$</p>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <span class="px-1.5 py-0.5 bg-emerald-600 text-white font-bold rounded text-[10px]">Step 2</span>
+                        <p class="text-xs font-bold text-slate-800">原函數與常數 $C$</p>
+                    </div>
+                    <div class="text-xs text-slate-700 space-y-1 font-mono leading-relaxed">
+                        <p>$\because A'(x) = f(x)$</p>
+                        <p>$\implies A(x) \text{ 為 } f(x) \text{ 之原函數}$</p>
+                        <p class="font-bold text-emerald-700 mt-1">$\therefore A(x) = F(x) + C$</p>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <span class="px-1.5 py-0.5 bg-emerald-600 text-white font-bold rounded text-[10px]">Step 3</span>
+                        <p class="text-xs font-bold text-slate-800">確定常數與相減</p>
+                    </div>
+                    <div class="text-xs text-slate-700 space-y-1 font-mono leading-relaxed">
+                        <p>$x = a \implies A(a) = 0$</p>
+                        <p>$\implies F(a) + C = 0 \implies C = -F(a)$</p>
+                        <p class="font-bold text-emerald-700 mt-1">$\therefore \text{面積} = F(b) - F(a)$</p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white py-3 text-center text-xs text-slate-400 border-t border-slate-200">
+        Definite Integral & Area Interactive Visualizer | Designed for Secondary Mathematics
+    </footer>
+
+    <!-- Interactive Script -->
+    <script>
+        const functions = {
+            f1: { expr: (x) => 0.25 * x * x + 1, antideriv: (x) => (0.25 * x * x * x) / 3 + x },
+            f2: { expr: (x) => -0.5 * x * x + 4, antideriv: (x) => (-0.5 * x * x * x) / 3 + 4 * x },
+            f3: { expr: (x) => Math.sin(x) + 2, antideriv: (x) => -Math.cos(x) + 2 * x },
+            f4: { expr: (x) => 1.2 * x + 0.8, antideriv: (x) => 0.6 * x * x + 0.8 * x }
+        };
+
+        // Zoom and Pan state
+        let viewTransform = {
+            zoom: 1.0,
+            panX: 0,
+            panY: 0
+        };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        function zoomCanvas(factor) {
+            viewTransform.zoom *= factor;
+            viewTransform.zoom = Math.max(0.4, Math.min(viewTransform.zoom, 5.0));
+            updateApp();
+        }
+
+        function resetZoomPan() {
+            viewTransform.zoom = 1.0;
+            viewTransform.panX = 0;
+            viewTransform.panY = 0;
+            updateApp();
+        }
+
+        function parseCustomFunction(str) {
+            try {
+                let sanitized = str.toLowerCase()
+                    .replace(/\^/g, '**')
+                    .replace(/sin/g, 'Math.sin')
+                    .replace(/cos/g, 'Math.cos')
+                    .replace(/tan/g, 'Math.tan')
+                    .replace(/exp/g, 'Math.exp')
+                    .replace(/log/g, 'Math.log')
+                    .replace(/sqrt/g, 'Math.sqrt')
+                    .replace(/abs/g, 'Math.abs');
+
+                const customExpr = new Function('x', `return ${sanitized};`);
+                const testVal = customExpr(1);
+                if (typeof testVal !== 'number' || isNaN(testVal)) return null;
+
+                const numAntideriv = (xVal) => {
+                    if (xVal === 0) return 0;
+                    const steps = 100;
+                    const h = xVal / steps;
+                    let simpsonSum = customExpr(0) + customExpr(xVal);
+                    for (let i = 1; i < steps; i++) {
+                        const curX = i * h;
+                        simpsonSum += (i % 2 === 0 ? 2 : 4) * customExpr(curX);
+                    }
+                    return (h / 3) * simpsonSum;
+                };
+
+                return { expr: customExpr, antideriv: numAntideriv };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function handleFuncSelectChange() {
+            const val = document.getElementById('func-select').value;
+            const customContainer = document.getElementById('custom-func-container');
+            if (val === 'custom') {
+                customContainer.classList.remove('hidden');
+            } else {
+                customContainer.classList.add('hidden');
+            }
+            updateApp();
+        }
+
+        function triggerMathJax() {
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise();
+            }
+        }
+
+        function resizeCanvas() {
+            const cvs = document.getElementById('main-canvas');
+            if (cvs && cvs.parentElement) {
+                const rect = cvs.parentElement.getBoundingClientRect();
+                cvs.width = rect.width * (window.devicePixelRatio || 1);
+                cvs.height = rect.height * (window.devicePixelRatio || 1);
+            }
+            updateApp();
+        }
+
+        function updateApp() {
+            const funcKey = document.getElementById('func-select').value;
+            let fObj;
+
+            if (funcKey === 'custom') {
+                const inputVal = document.getElementById('custom-func-input').value;
+                const parsed = parseCustomFunction(inputVal);
+                fObj = parsed ? parsed : functions.f1;
+            } else {
+                fObj = functions[funcKey];
+            }
+            
+            let a = parseFloat(document.getElementById('input-a').value);
+            if (isNaN(a)) a = 0;
+            let b = parseFloat(document.getElementById('input-b').value);
+            if (isNaN(b)) b = 4;
+            if (b <= a) b = a + 0.5;
+
+            const n = parseInt(document.getElementById('n-slider').value);
+            document.getElementById('n-val-display').innerText = `n = ${n}`;
+
+            const dx = (b - a) / n;
+            document.getElementById('calc-dx').innerText = dx.toFixed(4);
+
+            let sum = 0;
+            for (let i = 0; i < n; i++) {
+                let xEval = a + i * dx;
+                try { sum += fObj.expr(xEval) * dx; } catch(e) {}
+            }
+
+            let exactArea = 0;
+            try { exactArea = fObj.antideriv(b) - fObj.antideriv(a); } catch(e) {}
+
+            document.getElementById('calc-sum').innerText = isNaN(sum) ? 'N/A' : sum.toFixed(4);
+            document.getElementById('calc-exact').innerText = isNaN(exactArea) ? 'N/A' : exactArea.toFixed(4);
+
+            const showDx = document.getElementById('show-dx-check').checked;
+
+            renderCanvas(fObj, a, b, n, dx, showDx);
+        }
+
+        function renderCanvas(fObj, a, b, n, dx, showDx) {
+            const canvas = document.getElementById('main-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            if (width === 0 || height === 0) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            const padding = 45;
+            const baseMinX = Math.min(a - 1, -1);
+            const baseMaxX = Math.max(b + 1.5, 5);
+            const baseMinY = -0.5;
+            const baseMaxY = 5.5;
+
+            // Apply Zoom & Pan Transformations
+            const rangeX = (baseMaxX - baseMinX) / viewTransform.zoom;
+            const rangeY = (baseMaxY - baseMinY) / viewTransform.zoom;
+            const centerX = (baseMinX + baseMaxX) / 2 - viewTransform.panX;
+            const centerY = (baseMinY + baseMaxY) / 2 - viewTransform.panY;
+
+            const minX = centerX - rangeX / 2;
+            const maxX = centerX + rangeX / 2;
+            const minY = centerY - rangeY / 2;
+            const maxY = centerY + rangeY / 2;
+
+            function toScreenX(x) { return padding + ((x - minX) / (maxX - minX)) * (width - 2 * padding); }
+            function toScreenY(y) { return height - padding - ((y - minY) / (maxY - minY)) * (height - 2 * padding); }
+
+            // Grid Lines
+            ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
+            for (let x = Math.floor(minX); x <= Math.ceil(maxX); x++) {
+                ctx.beginPath();
+                ctx.moveTo(toScreenX(x), 0);
+                ctx.lineTo(toScreenX(x), height);
+                ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(toScreenX(minX), toScreenY(0)); ctx.lineTo(toScreenX(maxX), toScreenY(0));
+            ctx.moveTo(toScreenX(0), toScreenY(minY)); ctx.lineTo(toScreenX(0), toScreenY(maxY));
+            ctx.stroke();
+
+            // Riemann Rectangles (Shading)
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.22)';
+            ctx.strokeStyle = n > 80 ? 'transparent' : '#6366f1';
+            ctx.lineWidth = 0.8;
+
+            for (let i = 0; i < n; i++) {
+                const xLeft = a + i * dx;
+                let h = 0;
+                try { h = fObj.expr(xLeft); } catch(e){}
+                const rx = toScreenX(xLeft);
+                const ry = toScreenY(h);
+                const rw = toScreenX(xLeft + dx) - rx;
+                const rh = toScreenY(0) - ry;
+
+                ctx.fillRect(rx, ry, rw, rh);
+                if (n <= 80) ctx.strokeRect(rx, ry, rw, rh);
+            }
+
+            // Display A(x) label explicitly inside the accumulated area on canvas
+            const midX = (a + b) / 2;
+            let midY = 0;
+            try { midY = fObj.expr(midX) / 2; } catch(e){}
+            ctx.fillStyle = '#4338ca';
+            ctx.font = 'bold 14px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`累積面積 A(x)`, toScreenX(midX), toScreenY(midY));
+            ctx.textAlign = 'left'; // Reset alignment
+
+            // Smooth Curve y = f(x)
+            ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 3;
+            ctx.beginPath();
+            const step = (maxX - minX) / 300;
+            for (let x = minX; x <= maxX; x += step) {
+                const sx = toScreenX(x);
+                let valY = 0;
+                try { valY = fObj.expr(x); } catch(e){}
+                const sy = toScreenY(valY);
+                if (x === minX) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+            }
+            ctx.stroke();
+
+            // Highlight Last Slice Delta x if enabled
+            if (showDx && n > 0) {
+                const xLast = b - dx;
+                let hLast = 0;
+                try { hLast = fObj.expr(xLast); } catch(e){}
+                const rx = toScreenX(xLast);
+                const ry = toScreenY(hLast);
+                const rw = toScreenX(b) - rx;
+                const rh = toScreenY(0) - ry;
+
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.45)';
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = 2;
+                ctx.fillRect(rx, ry, rw, rh);
+                ctx.strokeRect(rx, ry, rw, rh);
+
+                ctx.fillStyle = '#b45309';
+                ctx.font = 'bold 12px Inter, sans-serif';
+                ctx.fillText(`高度 f(x) = ${isNaN(hLast)? 'N/A' : hLast.toFixed(2)}`, rx - 10, ry - 10);
+                ctx.fillText(`Δx = ${dx.toFixed(2)}`, rx, toScreenY(0) + 32);
+            }
+
+            // Boundary Lines a and b
+            ctx.strokeStyle = '#475569'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            let valA = 0, valB = 0;
+            try { valA = fObj.expr(a); valB = fObj.expr(b); } catch(e){}
+            ctx.moveTo(toScreenX(a), toScreenY(0)); ctx.lineTo(toScreenX(a), toScreenY(valA));
+            ctx.moveTo(toScreenX(b), toScreenY(0)); ctx.lineTo(toScreenX(b), toScreenY(valB));
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Labels for Boundaries a and b
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 13px Inter, sans-serif';
+            ctx.fillText(`a = ${a}`, toScreenX(a) - 12, toScreenY(0) + 18);
+            ctx.fillText(`b = ${b}`, toScreenX(b) - 12, toScreenY(0) + 18);
+        }
+
+        function initCanvasInteractions() {
+            const canvas = document.getElementById('main-canvas');
+            if (!canvas) return;
+
+            // Mouse wheel zoom
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+                zoomCanvas(zoomFactor);
+            }, { passive: false });
+
+            // Pan dragging
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragStart = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+                dragStart = { x: e.clientX, y: e.clientY };
+
+                const canvasRect = canvas.getBoundingClientRect();
+                const scaleX = 8 / canvasRect.width / viewTransform.zoom;
+                const scaleY = 6 / canvasRect.height / viewTransform.zoom;
+
+                viewTransform.panX += dx * scaleX;
+                viewTransform.panY -= dy * scaleY;
+                updateApp();
+            });
+
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            // Touch support for drag
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) {
+                    const dx = e.touches[0].clientX - dragStart.x;
+                    const dy = e.touches[0].clientY - dragStart.y;
+                    dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const scaleX = 8 / canvasRect.width / viewTransform.zoom;
+                    const scaleY = 6 / canvasRect.height / viewTransform.zoom;
+
+                    viewTransform.panX += dx * scaleX;
+                    viewTransform.panY -= dy * scaleY;
+                    updateApp();
+                }
+            });
+
+            canvas.addEventListener('touchend', () => { isDragging = false; });
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function() {
+            resizeCanvas();
+            initCanvasInteractions();
+            setTimeout(triggerMathJax, 200);
+        };
+    </script>
+</body>
+</html>
